@@ -1,7 +1,7 @@
 {
 	"schemaVersion": 1,
 	"id": "smooth-experience-bar",
-	"version": "1.0.0",
+	"version": "1.0.1",
 	"name": "平滑经验条",
 	"description": "平滑你的经验条😊",
 	"authors": ["YL"],

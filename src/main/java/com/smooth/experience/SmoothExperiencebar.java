@@ -4,93 +4,70 @@ import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.render.RenderLayer;
+import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.util.Identifier;
+import org.joml.Math;
 
 public class SmoothExperiencebar implements ClientModInitializer {
-	private static final MinecraftClient client = MinecraftClient.getInstance();
-	private static final Identifier ICONS = new Identifier("textures/gui/icons.png");
-	private static float playerExpProgress = 0;
-	private static float villagerExpProgress = 0;
-	private static final float SMOOTHNESS = 0.15f;
-	private static int lastPlayerExpLevel = 0;
-	private static int lastVillagerExpLevel = 0;
+	private static final Identifier ICONS=new Identifier("textures/gui/icons.png");
+	private static final RenderLayer EXPERIENCE_BAR_LAYER=RenderLayer.getText(ICONS);
+	private static final float SMOOTHNESS=0.1f;
+	private static final int BAR_WIDTH=182;
+	private static final int BAR_HEIGHT=5;
+	private static final int BACKGROUND_U=0;
+	private static final int BACKGROUND_V=64;
+	private static final int FOREGROUND_V=69;
+	private final MinecraftClient client=MinecraftClient.getInstance();
+	private float expProgress=0;
+	private int lastScaledWidth=-1;
+	private int lastScaledHeight=-1;
+	private int cachedX=0;
+	private int cachedY=0;
+	private int lastProgressWidth=-1;
 
-	@Override
-	public void onInitializeClient() {
-		HudRenderCallback.EVENT.register(this::renderExperienceBar);
+	@Override public void onInitializeClient() {
+		HudRenderCallback.EVENT.register((context,tickDelta)->{
+			renderExperienceBar(context);
+			renderExperienceLevel(context);
+		});
 	}
 
-	private void renderExperienceBar(DrawContext context, float tickDelta) {
-		if (client.player == null) return;
-
-		PlayerEntity player = client.player;
-		float targetPlayerExp = player.experienceProgress;
-		playerExpProgress = lerp(playerExpProgress, targetPlayerExp);
-		int playerExpLevel = player.experienceLevel;
-
-		int villagerExpLevel;
-		if (client.currentScreen != null && client.currentScreen.getTitle().getString().contains("Trading")) {
-			float targetVillagerExp = getVillagerExperienceProgress();
-			villagerExpProgress = lerp(villagerExpProgress, targetVillagerExp);
-			villagerExpLevel = (int) (villagerExpProgress * 10);
-		} else {
-			villagerExpProgress = 0;
-			villagerExpLevel = 0;
+	private void renderExperienceBar(DrawContext context) {
+		PlayerEntity player=client.player;
+		if(player==null||player.isCreative()||player.isSpectator())return;
+		int scaledWidth=client.getWindow().getScaledWidth();
+		int scaledHeight=client.getWindow().getScaledHeight();
+		if(scaledWidth!=lastScaledWidth||scaledHeight!=lastScaledHeight){
+			cachedX=scaledWidth/2-91;
+			cachedY=scaledHeight-32+3;
+			lastScaledWidth=scaledWidth;
+			lastScaledHeight=scaledHeight;
 		}
 
-		renderPlayerExperienceBar(context, playerExpProgress, playerExpLevel);
-		lastPlayerExpLevel = playerExpLevel;
-
-		if (villagerExpLevel > 0) {
-			renderVillagerExperienceBar(context, villagerExpProgress, villagerExpLevel);
-			lastVillagerExpLevel = villagerExpLevel;
-		} else {
-			lastVillagerExpLevel = 0;
-		}
-	}
-
-	private float getVillagerExperienceProgress() {
-		if (client.player == null || client.player.currentScreenHandler == null) return 0;
-		if (client.player.currentScreenHandler.slots.size() <= 2) return 0;
-		return client.player.currentScreenHandler.getSlot(2).getStack().getCount() / 10f;
-	}
-
-	private float lerp(float current, float target) {
-		return current + (target - current) * SmoothExperiencebar.SMOOTHNESS;
-	}
-
-	private void renderPlayerExperienceBar(DrawContext context, float progress, int level) {
-		if (client.interactionManager == null || client.interactionManager.hasExperienceBar()) {
-			int width = client.getWindow().getScaledWidth();
-			int height = client.getWindow().getScaledHeight();
-			int x = width / 2 - 91;
-			int y = height - 32 + 3;
-
-			context.drawTexture(ICONS, x, y, 0, 64, 182, 5);
-			context.drawTexture(ICONS, x, y, 0, 69, (int)(182 * progress), 5);
-
-			if (level != lastPlayerExpLevel || progress >= 0.99f) {
-				String levelText = String.valueOf(level);
-				int textWidth = client.textRenderer.getWidth(levelText);
-				context.drawText(client.textRenderer, levelText, x + 91 - textWidth / 2, y - 9, 8453920, true);
-			}
+		float targetExp=player.experienceProgress;
+		expProgress=Math.lerp(expProgress,targetExp,SMOOTHNESS);
+		int progressWidth=(int)(BAR_WIDTH*expProgress);
+		if(progressWidth!=lastProgressWidth){
+			VertexConsumerProvider.Immediate consumers=context.getVertexConsumers();
+			consumers.draw(EXPERIENCE_BAR_LAYER);
+			context.drawTexture(ICONS,cachedX,cachedY,BACKGROUND_U,BACKGROUND_V,BAR_WIDTH,BAR_HEIGHT);
+			context.drawTexture(ICONS,cachedX,cachedY,BACKGROUND_U,FOREGROUND_V,progressWidth,BAR_HEIGHT);
+			consumers.draw();
+			lastProgressWidth=progressWidth;
 		}
 	}
 
-	private void renderVillagerExperienceBar(DrawContext context, float progress, int level) {
-		int width = client.getWindow().getScaledWidth();
-		int height = client.getWindow().getScaledHeight();
-		int x = width / 2 - 91;
-		int y = height - 59;
-
-		context.drawTexture(ICONS, x, y, 0, 64, 182, 5);
-		context.drawTexture(ICONS, x, y, 0, 84, (int)(182 * progress), 5);
-
-		if (level != lastVillagerExpLevel || progress >= 0.99f) {
-			String levelText = String.valueOf(level);
-			int textWidth = client.textRenderer.getWidth(levelText);
-			context.drawText(client.textRenderer, levelText, x + 91 - textWidth / 2, y - 9, 0x20A0FF, true);
-		}
+	private void renderExperienceLevel(DrawContext context) {
+		PlayerEntity player=client.player;
+		if(player==null||player.isCreative()||player.isSpectator())return;
+		int scaledWidth=client.getWindow().getScaledWidth();
+		int scaledHeight=client.getWindow().getScaledHeight();
+		int x=scaledWidth/2;
+		int y=scaledHeight-31-4;
+		String levelText=String.valueOf(player.experienceLevel);
+		int textWidth=client.textRenderer.getWidth(levelText);
+		context.drawText(client.textRenderer,levelText,x-textWidth/2,y,0x80FF20,true);
 	}
 }
