@@ -20,14 +20,14 @@ dependencies {
 }
 
 tasks.withType(JavaCompile).configureEach {
-	it.options.release = 24
+	it.options.release = 21
 }
 
 java {
 	withSourcesJar()
 
-	sourceCompatibility = JavaVersion.VERSION_24
-	targetCompatibility = JavaVersion.VERSION_24
+	sourceCompatibility = JavaVersion.VERSION_21
+	targetCompatibility = JavaVersion.VERSION_21
 }
 
 publishing {
