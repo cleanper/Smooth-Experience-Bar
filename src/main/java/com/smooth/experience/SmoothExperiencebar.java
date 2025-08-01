@@ -5,13 +5,13 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Player;
 import net.minecraftforge.client.event.RenderGuiEvent;
-import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import org.joml.Math;
 
 public class SmoothExperiencebar {
 	private static final ResourceLocation ICONS = ResourceLocation.withDefaultNamespace("textures/gui/icons.png");
 	private static final float SMOOTHNESS = 0.3f;
+	private static final float THRESHOLD = 0.002f;
 	private static final int BAR_WIDTH = 182;
 	private static final int BAR_HEIGHT = 5;
 	private static final int BACKGROUND_U = 0;
@@ -20,23 +20,13 @@ public class SmoothExperiencebar {
 
 	private final Minecraft client = Minecraft.getInstance();
 	private float expProgress = 0;
-	private float lastExpProgress = 0;
-	private int lastScaledWidth = -1;
+    private int lastScaledWidth = -1;
 	private int lastScaledHeight = -1;
 	private int cachedX = 0;
 	private int cachedY = 0;
 
-	public SmoothExperiencebar() {
-		MinecraftForge.EVENT_BUS.register(this);
-	}
-
 	@SubscribeEvent
 	public void onRenderGui(RenderGuiEvent.Post event) {
-		renderExperienceBar(event.getGuiGraphics());
-		renderExperienceLevel(event.getGuiGraphics());
-	}
-
-	private void renderExperienceBar(GuiGraphics context) {
 		Player player = client.player;
 		if (player == null || player.isCreative() || player.isSpectator()) return;
 
@@ -50,30 +40,33 @@ public class SmoothExperiencebar {
 			lastScaledHeight = scaledHeight;
 		}
 
-		float targetExp = player.experienceProgress;
-		expProgress = Math.lerp(expProgress, targetExp, SMOOTHNESS);
+        float targetExp = player.experienceProgress;
+		float diff = Math.abs(targetExp - expProgress);
 
-		if (Math.abs(expProgress - lastExpProgress) > 0.001f) {
-			context.blit(ICONS, cachedX, cachedY, BACKGROUND_U, BACKGROUND_V, BAR_WIDTH, BAR_HEIGHT);
+		if (diff > THRESHOLD) {
+			expProgress = Math.lerp(expProgress, targetExp, SMOOTHNESS);
+			if (diff < THRESHOLD * 2) {
+				expProgress = targetExp;
+			}
+
 			int progressWidth = (int)(BAR_WIDTH * expProgress);
+			GuiGraphics context = event.getGuiGraphics();
+			context.blit(ICONS, cachedX, cachedY, BACKGROUND_U, BACKGROUND_V, BAR_WIDTH, BAR_HEIGHT);
 			if (progressWidth > 0) {
 				context.blit(ICONS, cachedX, cachedY, BACKGROUND_U, FOREGROUND_V, progressWidth, BAR_HEIGHT);
 			}
-			lastExpProgress = expProgress;
 		}
+
+		renderExperienceLevel(event.getGuiGraphics());
 	}
 
 	private void renderExperienceLevel(GuiGraphics context) {
 		Player player = client.player;
 		if (player == null || player.isCreative() || player.isSpectator()) return;
 
-		int scaledWidth = client.getWindow().getGuiScaledWidth();
-		int scaledHeight = client.getWindow().getGuiScaledHeight();
-		int x = scaledWidth / 2;
-		int y = scaledHeight - 31 - 4;
+		int x = lastScaledWidth / 2;
+		int y = lastScaledHeight - 31 - 4;
 		String levelText = String.valueOf(player.experienceLevel);
-		int textWidth = client.font.width(levelText);
-
-		context.drawString(client.font, levelText, x - textWidth / 2, y, 0x80FF20, true);
+		context.drawString(client.font, levelText, x - client.font.width(levelText) / 2, y, 0x80FF20, true);
 	}
 }
