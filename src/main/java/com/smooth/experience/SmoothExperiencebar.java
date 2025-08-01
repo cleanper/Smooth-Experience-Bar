@@ -11,7 +11,7 @@ import org.joml.Math;
 
 public class SmoothExperiencebar {
 	private static final ResourceLocation ICONS = ResourceLocation.withDefaultNamespace("textures/gui/icons.png");
-	private static final float SMOOTHNESS = 0.1f;
+	private static final float SMOOTHNESS = 0.3f;
 	private static final int BAR_WIDTH = 182;
 	private static final int BAR_HEIGHT = 5;
 	private static final int BACKGROUND_U = 0;
@@ -20,11 +20,11 @@ public class SmoothExperiencebar {
 
 	private final Minecraft client = Minecraft.getInstance();
 	private float expProgress = 0;
+	private float lastExpProgress = 0;
 	private int lastScaledWidth = -1;
 	private int lastScaledHeight = -1;
 	private int cachedX = 0;
 	private int cachedY = 0;
-	private int lastProgressWidth = -1;
 
 	public SmoothExperiencebar() {
 		MinecraftForge.EVENT_BUS.register(this);
@@ -52,13 +52,14 @@ public class SmoothExperiencebar {
 
 		float targetExp = player.experienceProgress;
 		expProgress = Math.lerp(expProgress, targetExp, SMOOTHNESS);
-		int progressWidth = (int)(BAR_WIDTH * expProgress);
 
-		if (progressWidth != lastProgressWidth) {
-			context.flush();
+		if (Math.abs(expProgress - lastExpProgress) > 0.001f) {
 			context.blit(ICONS, cachedX, cachedY, BACKGROUND_U, BACKGROUND_V, BAR_WIDTH, BAR_HEIGHT);
-			context.blit(ICONS, cachedX, cachedY, BACKGROUND_U, FOREGROUND_V, progressWidth, BAR_HEIGHT);
-			lastProgressWidth = progressWidth;
+			int progressWidth = (int)(BAR_WIDTH * expProgress);
+			if (progressWidth > 0) {
+				context.blit(ICONS, cachedX, cachedY, BACKGROUND_U, FOREGROUND_V, progressWidth, BAR_HEIGHT);
+			}
+			lastExpProgress = expProgress;
 		}
 	}
 
