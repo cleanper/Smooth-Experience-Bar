@@ -11,7 +11,7 @@ def generate_logo(
     version_color=(100, 100, 100),
     font_name="Sriracha-Regular.ttf",
     main_text="Smooth\nExperience\nBar",
-    version_text="V1.0.3"
+    version_text="V1.0.3.1"
 ):
     """Generate application logo with layered text and geometric pattern."""
 
