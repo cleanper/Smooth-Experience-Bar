@@ -1,7 +1,7 @@
 {
 	"schemaVersion": 1,
 	"id": "smooth-experience-bar",
-	"version": "1.0.2",
+	"version": "1.0.3",
 	"name": "平滑经验条",
 	"description": "平滑你的经验条😊",
 	"authors": ["YL"],
@@ -11,10 +11,9 @@
 	"entrypoints": {
 		"client": ["com.smooth.experience.SmoothExperiencebar"]
 	},
-	"mixins": ["smooth-experience-bar.mixins.json"],
 	"depends": {
-		"fabricloader": ">=0.16.14",
-        "minecraft": ">=1.20 <1.21",
+		"fabricloader": ">=0.17.1",
+        "minecraft": ">=1.20 <=1.21.1",
 		"java": ">=17",
 		"fabric-api": "*"
 	},
