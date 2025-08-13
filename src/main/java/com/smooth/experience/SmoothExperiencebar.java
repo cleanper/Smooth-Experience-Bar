@@ -1,16 +1,18 @@
 package com.smooth.experience;
 
 import net.fabricmc.api.ClientModInitializer;
-import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
+import net.fabricmc.fabric.api.client.rendering.v1.HudLayerRegistrationCallback;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.render.RenderLayer;
 import net.minecraft.client.render.RenderTickCounter;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.util.Identifier;
 import org.joml.*;
 import com.google.gson.*;
 import org.joml.Math;
+import com.mojang.blaze3d.systems.RenderSystem;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -18,8 +20,6 @@ import java.nio.file.Path;
 import java.time.LocalDate;
 
 public final class SmoothExperiencebar implements ClientModInitializer {
-    private static final Identifier EXPERIENCE_BAR_BACKGROUND = Identifier.of("minecraft", "textures/gui/sprites/hud/experience_bar_background.png");
-    private static final Identifier EXPERIENCE_BAR_PROGRESS = Identifier.of("minecraft", "textures/gui/sprites/hud/experience_bar_progress.png");
     private static final int BAR_WIDTH = 182;
     private static final int BAR_HEIGHT = 5;
     private static final int OUTLINE_THICKNESS = 1;
@@ -70,7 +70,11 @@ public final class SmoothExperiencebar implements ClientModInitializer {
         loadConfig();
 
         if (!autohudDetected) {
-            HudRenderCallback.EVENT.register(this::onRender);
+            HudLayerRegistrationCallback.EVENT.register(layeredDrawer -> layeredDrawer.attachLayerAfter(
+                    Identifier.of("minecraft", "experience_level"),
+                    Identifier.of("smooth_experiencebar", "experience_bar"),
+                    this::onRender
+            ));
         }
     }
 
@@ -141,16 +145,32 @@ public final class SmoothExperiencebar implements ClientModInitializer {
         expProgress = config.enableSmoothing ? Math.lerp(expProgress, targetExp, config.smoothness) : targetExp;
         int progressWidth = (int)(BAR_WIDTH * expProgress);
 
-        context.drawTexture(EXPERIENCE_BAR_BACKGROUND, barPositionCache.x, barPositionCache.y, 0, 0, BAR_WIDTH, BAR_HEIGHT, BAR_WIDTH, BAR_HEIGHT);
+        context.drawGuiTexture(
+                RenderLayer::getGuiTextured,
+                Identifier.ofVanilla("hud/experience_bar_background"),
+                barPositionCache.x,
+                barPositionCache.y,
+                BAR_WIDTH,
+                BAR_HEIGHT
+        );
 
         if (progressWidth > 0) {
             if (config.enableGradient) {
                 float intensity = config.minGradientIntensity + (1f - config.minGradientIntensity) * expProgress;
                 tmpColor.set(textColor).mul(intensity);
-                context.setShaderColor(tmpColor.x, tmpColor.y, tmpColor.z, tmpColor.w);
+                RenderSystem.setShaderColor(tmpColor.x, tmpColor.y, tmpColor.z, tmpColor.w);
             }
-            context.drawTexture(EXPERIENCE_BAR_PROGRESS, barPositionCache.x, barPositionCache.y, 0, 0, progressWidth, BAR_HEIGHT, BAR_WIDTH, BAR_HEIGHT);
-            context.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
+
+            context.drawGuiTexture(
+                    RenderLayer::getGuiTextured,
+                    Identifier.ofVanilla("hud/experience_bar_progress"),
+                    BAR_WIDTH, BAR_HEIGHT,
+                    0, 0,
+                    barPositionCache.x, barPositionCache.y,
+                    progressWidth, BAR_HEIGHT
+            );
+
+            RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
         }
     }
 
