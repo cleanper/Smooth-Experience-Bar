@@ -1,12 +1,11 @@
 package com.smooth.experience;
 
 import net.fabricmc.api.ClientModInitializer;
-import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
+import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gl.RenderPipelines;
 import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.render.RenderTickCounter;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.util.Identifier;
 import org.joml.Vector2i;
@@ -65,19 +64,31 @@ public final class SmoothExperiencebar implements ClientModInitializer {
         shouldRender = !incompatibleModDetected;
         loadConfig();
 
-        if (!autohudDetected) {
+        // 'net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback' 已弃用
+        /*
+        新版if (!autohudDetected) {
             HudElementRegistry.attachElementAfter(
                     Identifier.of("minecraft", "experience_level"),
                     Identifier.of("smooth_experiencebar", "experience_bar"),
-                    this::onRender
+                    (context, tickDelta) -> {
+                        if (shouldRender && config.enabled) {
+                            renderExperienceBar(context);
+                            renderExperienceLevel(context);
+                        }
+                    }
             );
         }
-    }
-
-    private void onRender(DrawContext context, RenderTickCounter tickCounter) {
-        if (autohudDetected || incompatibleModDetected || !shouldRender || !config.enabled) return;
-        renderExperienceBar(context, tickCounter);
-        renderExperienceLevel(context, tickCounter);
+        似乎在经验等级为>0 <1 包括0跳跃1时工作不正确 无法正确平滑 因此25w33a使用旧版方式实现。
+        It seems that the work is incorrect and cannot be smoothed correctly when the experience level is>0<1, including 0 jumps and 1. Therefore, 25w33a is implemented using the old version method.
+         */
+        if (!autohudDetected) {
+            HudRenderCallback.EVENT.register((drawContext, tickDelta) -> {
+                if (shouldRender && config.enabled) {
+                    renderExperienceBar(drawContext);
+                    renderExperienceLevel(drawContext);
+                }
+            });
+        }
     }
 
     private void loadConfig() {
@@ -121,10 +132,10 @@ public final class SmoothExperiencebar implements ClientModInitializer {
         outlineColor.z = 0.5f + 0.5f * (float)Math.sin(time * 1.5f + 4.188f);
     }
 
-    private void renderExperienceBar(DrawContext context, RenderTickCounter ignoredTickCounter) {
+    private void renderExperienceBar(DrawContext context) {
         if (autohudDetected || incompatibleModDetected) return;
         PlayerEntity player = client.player;
-        if (player == null || player.isCreative() || player.isSpectator()) return;
+        if (player == null) return;
 
         Vector2i currentSize = new Vector2i(
                 client.getWindow().getScaledWidth(),
@@ -135,7 +146,7 @@ public final class SmoothExperiencebar implements ClientModInitializer {
             barPositionCache.set((currentSize.x >> 1) - 91, currentSize.y - 29);
         }
 
-        float targetExp = player.experienceProgress;
+        float targetExp = player.isDead() ? 0 : player.experienceProgress;
         expProgress = config.enableSmoothing
                 ? expProgress + (targetExp - expProgress) * config.smoothness
                 : targetExp;
@@ -160,12 +171,12 @@ public final class SmoothExperiencebar implements ClientModInitializer {
         }
     }
 
-    private void renderExperienceLevel(DrawContext context, RenderTickCounter ignoredTickCounter) {
+    private void renderExperienceLevel(DrawContext context) {
         if (autohudDetected || incompatibleModDetected) return;
         PlayerEntity player = client.player;
-        if (player == null || player.isCreative() || player.isSpectator()) return;
+        if (player == null) return;
 
-        int currentLevel = player.experienceLevel;
+        int currentLevel = player.isDead() ? 0 : player.experienceLevel;
         String levelText = String.valueOf(currentLevel);
 
         if (currentLevel != lastLevel) {
