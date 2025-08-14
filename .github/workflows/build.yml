@@ -2,9 +2,9 @@ name: CI Build and Publish
 
 on:
   push:
-    branches: [ 1.20.6 ]
+    branches: [ 1.20.4 ]
   pull_request:
-    branches: [ 1.20.6 ]
+    branches: [ 1.20.4 ]
 
 jobs:
   build:
