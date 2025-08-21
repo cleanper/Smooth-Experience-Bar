@@ -2,9 +2,9 @@ name: CI Build and Publish
 
 on:
   push:
-    branches: [ 25w33a ]
+    branches: [ 25w34b ]
   pull_request:
-    branches: [ 25w33a ]
+    branches: [ 25w34b ]
 
 jobs:
   build:
