@@ -1,0 +1,29 @@
+{
+	"schemaVersion": 1,
+	"id": "smooth-experience-bar",
+	"version": "1.0.3.1",
+	"name": "平滑经验条",
+	"description": "平滑你的经验条😊",
+	"authors": ["YL"],
+	"license": "LGPL-3.0-only",
+	"icon": "Logo.png",
+	"environment": "client",
+	"entrypoints": {
+		"client": ["com.smooth.experience.SmoothExperiencebar"]
+	},
+	"depends": {
+		"fabricloader": ">=0.17.2",
+        "minecraft": [
+            "1.21.9-alpha.25.34.b",
+            "1.21.9-alpha.25.34.a",
+        	"1.21.9-alpha.25.33.a",
+        	"1.21.9-alpha.25.32.a",
+        	"1.21.9-alpha.25.31.a"
+        ],
+		"java": ">=21",
+		"fabric-api": "*"
+	},
+	"suggests": {
+		"another-mod": "*"
+	}
+}
